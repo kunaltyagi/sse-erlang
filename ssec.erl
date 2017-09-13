@@ -40,7 +40,8 @@ encrypt_data(UserKey, Data) ->
 
 decrypt_data(UserKey, Data) ->
     Algo = element(1, algo_metadata()),
-    crypto:block_decrypt(Algo, UserKey, Data).
+    PadData = crypto:block_decrypt(Algo, UserKey, Data),
+    unpad_rfc5652(PadData).
 
 pad_zero(Width, Binary) ->
     case (Width - (size(Binary) rem Width)) rem Width of
@@ -48,13 +49,34 @@ pad_zero(Width, Binary) ->
         N -> <<Binary/binary, 0:(N*8)>> % 8 bits in one byte
     end.
 
+unpad_zero(Binary) ->
+  unpad_zero(Binary, size(Binary) - 1).
+
+unpad_zero(_Binary, -1) ->
+  <<>>;
+unpad_zero(Binary, Idx) ->
+  case binary:at(Binary, Idx) of
+    0 -> unpad_zero(Binary, Idx - 1);
+    _ -> binary:part(Binary, 0, Idx + 1)
+  end.
+
 pad_rfc5652(Width, Binary) ->
     case (Width - (size(Binary) rem Width)) rem Width of
         0 -> pad_rfc5652(Width, Width, Binary);
         N -> pad_rfc5652(N, N, Binary)
     end.
 
-pad_rfc5652(OrigWidth, Length, Binary) when Length > 0 ->
-    pad_rfc5652(OrigWidth, Length-1, <<Binary/binary, OrigWidth:8>>);
-pad_rfc5652(_, 0, Binary) ->
-    Binary.
+pad_rfc5652(_OrigWidth, 0, Binary) ->
+    Binary;
+pad_rfc5652(OrigWidth, Length, Binary) ->
+    pad_rfc5652(OrigWidth, Length-1, <<Binary/binary, OrigWidth:8>>).
+
+
+unpad_rfc5652(Binary) ->
+    Size = size(Binary),
+    Last = binary:at(Binary, Size - 1),
+    Suffix = binary:part(Binary, Size, -1 * Last),
+    case lists:all(fun(X) -> X =:= Last end, binary:bin_to_list(Suffix)) of
+        true -> binary:part(Binary, 0, Size - Last);
+        false -> Binary
+    end.
