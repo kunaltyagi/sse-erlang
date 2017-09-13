@@ -8,7 +8,8 @@
          test_hash/0,
          test_encryption/0]).
 
--import(crypto, [strong_rand_bytes/1]).
+-import(crypto, [strong_rand_bytes/1, hmac/3,
+                 block_encrypt/3, block_decrypt/3]).
 
 gen_salt(Length) when Length >= 32, Length =< 64 ->
     % erlang:binary_to_list(crypto:strong_rand_bytes(Length)).
@@ -112,7 +113,6 @@ pad_rfc5652(_OrigWidth, 0, Binary) ->
     Binary;
 pad_rfc5652(OrigWidth, Length, Binary) ->
     pad_rfc5652(OrigWidth, Length-1, <<Binary/binary, OrigWidth:8>>).
-
 
 unpad_rfc5652(Binary) ->
     Size = size(Binary),
