@@ -3,8 +3,10 @@
 -export([gen_salt/1,
          gen_hash/3,
          verify_key/3,
-         encrypt_data/2,
-         decrypt_data/2]).
+         encrypt_data/2, encrypt_data/3,
+         decrypt_data/2, decrypt_data/3,
+         test_hash/0,
+         test_encryption/0]).
 
 -import(crypto, [strong_rand_bytes/1]).
 
@@ -24,6 +26,13 @@ verify_key(UserKey, Salt, Hash) ->
     {HashType, _HashValue} = Hash,
     gen_hash(HashType, UserKey, Salt) =:= Hash.
 
+test_hash() ->
+    AlgoList = [md5, sha, sha256],
+    Key = gen_salt(64),
+    Salt = gen_salt(32),
+    HashList = [gen_hash(Algo, Key, Salt) || Algo <- AlgoList],
+    lists:all(fun(X) -> verify_key(Key, Salt, X) =:= true end, HashList).
+
 algo_metadata() ->
     % store details such as 
     % - algorithm to use
@@ -31,17 +40,50 @@ algo_metadata() ->
     % - use AEAD mode or not
     % Currently doesn't do anything more than supply the algorithm
     Algo = aes_ecb,
-    {Algo}.
+    Pad = rfc5652,
+    {Algo, Pad}.
 
 encrypt_data(UserKey, Data) ->
-    Algo = element(1, algo_metadata()),
-    PadData = pad_rfc5652(16, Data),
+    encrypt_data(UserKey, Data, algo_metadata()).
+encrypt_data(UserKey, Data, AlgoMetaData) ->
+    {Algo, Pad} = AlgoMetaData,
+    % Technically 16 should also be in metadata?
+    PadData = pad(Pad, 16, Data),
     crypto:block_encrypt(Algo, UserKey, PadData).
 
 decrypt_data(UserKey, Data) ->
-    Algo = element(1, algo_metadata()),
+    decrypt_data(UserKey, Data, algo_metadata()).
+decrypt_data(UserKey, Data, AlgoMetaData) ->
+    {Algo, Pad} = AlgoMetaData,
     PadData = crypto:block_decrypt(Algo, UserKey, Data),
-    unpad_rfc5652(PadData).
+    unpad(Pad, PadData).
+
+verify_encryption(Key, Msg, AlgoMetaData) ->
+    EncryptedMsg = encrypt_data(Key, Msg, AlgoMetaData),
+    Msg =:= decrypt_data(Key, EncryptedMsg, AlgoMetaData).
+
+test_encryption() ->
+    AlgoList = [aes_ecb],
+    PadType = [zero, rfc5652],
+    Key = gen_salt(32),
+    Msg = <<"Test Binary Stream">>,
+    MetaDataList = [{Algo, Pad} || Algo <- AlgoList, Pad <- PadType],
+    lists:all(fun(X) -> verify_encryption(Key, Msg, X) =:= true end, MetaDataList).
+
+pad(zero, Width, Binary) ->
+    pad_zero(Width, Binary);
+pad(rfc5652, Width, Binary) ->
+    pad_rfc5652(Width, Binary).
+
+unpad(zero, Binary) ->
+    unpad_zero(Binary);
+unpad(rfc5652, Binary) ->
+    unpad_rfc5652(Binary).
+
+% Alternative pad implementation:
+% Pad with symbol X for Y times
+% pad_rfc5652/3 does this, but don't use it to pad with zeroes
+% Alternative Unpad implementation not done to prevent misuse
 
 pad_zero(Width, Binary) ->
     case (Width - (size(Binary) rem Width)) rem Width of
