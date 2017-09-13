@@ -6,9 +6,9 @@ SSE implementation in Erlang
 Assuming ```Key``` is provided by the user
 ```erlang
 % 32 bytes are minimum, 64 max
-{SaltSuccess, Salt} = ssec:gen_salt(32).
+{SaltSuccess, Salt} = ssec_base:gen_salt(32).
 
-Hash = ssec:gen_hash(sha256, Key, Salt).
+Hash = ssec_base:gen_hash(sha256, Key, Salt).
 ```
 ```gen_salt``` throws an exception on bad length input. If no error is thrown, ```SaltSuccess``` is ```ok```. In case this function is modified to not throw, consider pattern matching to catch errors early.
 
@@ -17,7 +17,7 @@ Hash = ssec:gen_hash(sha256, Key, Salt).
 ### Stage 2
 Later, verify that the user's provided key is the same as before by using the stored ```Salt``` and ```Hash```
 ```erlang
-ssec:verify_key(Key, Salt, Hash).
+ssec_base:verify_key(Key, Salt, Hash).
 ```
 ### Stage 3
 The key from the user can be used to encrypt or decrypt ```Data``` using

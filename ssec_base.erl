@@ -1,4 +1,4 @@
--module(ssec).
+-module(ssec_base).
 
 -export([gen_salt/1,
          gen_hash/3,
