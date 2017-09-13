@@ -1,7 +1,7 @@
 # sse-erlang
 SSE implementation in Erlang
 
-## Usage
+## Using ssec_base
 ### Stage 1
 Assuming ```Key``` is provided by the user
 ```erlang
@@ -22,11 +22,14 @@ ssec_base:verify_key(Key, Salt, Hash).
 ### Stage 3
 The key from the user can be used to encrypt or decrypt ```Data``` using
 ```erlang
-EncryptedData = encryptData(Key, Data).
+EncryptedData =ssec_base: encryptData(Key, Data).
 % at a later point of time
-Data = decryptData(Key, EncryptedData).
+Data = ssec_base:decryptData(Key, EncryptedData).
 ```
 Here, ```Data``` and ```EncryptedData``` are ```binary```.
 
-## Deep Dive
-In order to understand more, read the functions ```test_hash``` and ```test_encryption```
+### Deep Dive
+In order to understand more, read the functions ```ssec_base:test_hash``` and ```ssec_base:test_encryption```
+
+## Using impl
+TODO
