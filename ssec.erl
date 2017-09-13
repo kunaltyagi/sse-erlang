@@ -13,11 +13,11 @@
 
 gen_salt(Length) when Length >= 32, Length =< 64 ->
     % erlang:binary_to_list(crypto:strong_rand_bytes(Length)).
-    crypto:strong_rand_bytes(Length);
+    {ok, crypto:strong_rand_bytes(Length)};
 gen_salt(Length) when Length < 32 ->
-    {error, "Minimum length is 32. Provided: " ++ erlang:integer_to_list(Length)};
+    throw({error, "Minimum length is 32. Provided: " ++ erlang:integer_to_list(Length)});
 gen_salt(Length) ->
-    {error, "Maximum length is 64. Provided: " ++ erlang:integer_to_list(Length)}.
+    throw({error, "Maximum length is 64. Provided: " ++ erlang:integer_to_list(Length)}).
 
 gen_hash(Type, UserKey, Salt) ->
     % save the algorithm used, eg md5, sha, sha256
@@ -29,8 +29,8 @@ verify_key(UserKey, Salt, Hash) ->
 
 test_hash() ->
     AlgoList = [md5, sha, sha256],
-    Key = gen_salt(64),
-    Salt = gen_salt(32),
+    {ok, Key} = gen_salt(64),
+    {ok, Salt} = gen_salt(32),
     HashList = [gen_hash(Algo, Key, Salt) || Algo <- AlgoList],
     lists:all(fun(X) -> verify_key(Key, Salt, X) =:= true end, HashList).
 
@@ -66,7 +66,7 @@ verify_encryption(Key, Msg, AlgoMetaData) ->
 test_encryption() ->
     AlgoList = [aes_ecb],
     PadType = [zero, rfc5652],
-    Key = gen_salt(32),
+    {ok, Key} = gen_salt(32),
     Msg = <<"Test Binary Stream">>,
     MetaDataList = [{Algo, Pad} || Algo <- AlgoList, Pad <- PadType],
     lists:all(fun(X) -> verify_encryption(Key, Msg, X) =:= true end, MetaDataList).

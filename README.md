@@ -6,11 +6,13 @@ SSE implementation in Erlang
 Assuming ```Key``` is provided by the user
 ```erlang
 % 32 bytes are minimum, 64 max
-Salt = ssec:gen_salt(32).
+{SaltSuccess, Salt} = ssec:gen_salt(32).
 
 Hash = ssec:gen_hash(sha256, Key, Salt).
 ```
-Don't forget to store Salt and Hash for every new key.
+```gen_salt``` throws an exception on bad length input. If no error is thrown, ```SaltSuccess``` is ```ok```. In case this function is modified to not throw, consider pattern matching to catch errors early.
+
+ Don't forget to store Salt and Hash for every new key.
 
 ### Stage 2
 Later, verify that the user's provided key is the same as before by using the stored ```Salt``` and ```Hash```
