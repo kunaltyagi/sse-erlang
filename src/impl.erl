@@ -27,5 +27,8 @@ verify_ssec_key(ASCIIKey, Checksum) ->
 % TODO:
 % crypto gives <<8 bit integers comma seperated>>
 % HashValue is <<"Base16string">>
-            {crypto:hash(HashType, Key) =:= HashValue, "Verification status"}
+            Lhs = erlang:binary_to_list(crypto:hash(HashType, Key)),
+            Rhs = erlang:binary_to_integer(HashValue, 16),
+            Value = lists:foldl(fun(X, Old) -> X + Old*256 end, 0, Lhs) =:= Rhs,
+            {Value, "Verification status"}
     end.
