@@ -4,7 +4,8 @@
                     encrypt_data/3, decrypt_data/2, decrypt_data/3]).
 
 -export([verify_ssec_algorithm/1,
-         verify_ssec_key/2]).
+         verify_ssec_key/2,
+         test_verification_ssec_key/0]).
 
 verify_ssec_algorithm(Algorithm) ->
     Algorithm =:= "AES256".
@@ -32,3 +33,8 @@ verify_ssec_key(ASCIIKey, Checksum) ->
             Value = lists:foldl(fun(X, Old) -> X + Old*256 end, 0, Lhs) =:= Rhs,
             {Value, "Verification status"}
     end.
+
+test_verification_ssec_key() ->
+    Key = "556B58703273357638792F413F4428472B4B6250655368566D59713374367739",
+    Checksum = "64C40DC99A6FE92CF3B7CBD5C22D8A13",
+    verify_ssec_key(base64:encode(Key), {md5, base64:encode(Checksum)}).
