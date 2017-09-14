@@ -1,5 +1,5 @@
 # sse-erlang
-SSE implementation in Erlang
+Server Side Encryption (SSE) implementation in Erlang
 
 ## Using ssec_base
 ### Stage 1
@@ -29,7 +29,10 @@ Data = ssec_base:decryptData(Key, EncryptedData).
 Here, ```Data``` and ```EncryptedData``` are ```binary```.
 
 ### Deep Dive
-In order to understand more, read the functions ```ssec_base:test_hash``` and ```ssec_base:test_encryption```
+In order to understand more, read the functions ```ssec_base:test_hash``` and ```ssec_base:test_encryption```.
 
 ## Using impl
 TODO
+
+### Deep Dive
+In order to understand more, read the functions ```impl:test_verification_ssec_key```.
