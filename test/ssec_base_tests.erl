@@ -6,7 +6,12 @@
 
 -import(ssec_base, [gen_salt/1]).
 
+-ifdef(EUNIT).
+
+%% Test 1
 gen_salt_test_() ->
     [?_assert(gen_salt(32) == gen_salt(32)),
      ?_assert(gen_salt(32) /= gen_salt(32))].
      
+
+-endif.
