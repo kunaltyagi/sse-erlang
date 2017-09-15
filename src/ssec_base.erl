@@ -2,6 +2,8 @@
 
 -author("kunal.tyagi").
 
+-include("eunit/include/eunit.hrl").
+
 -export([gen_salt/1,
          gen_hash/3,
          verify_key/3,
@@ -10,32 +12,49 @@
          test_hash/0,
          test_encryption/0]).
 
--import(crypto, [strong_rand_bytes/1, hmac/3,
-                 block_encrypt/3, block_decrypt/3]).
-
+%% @doc generate a random salt
+%%
+-spec(gen_salt(Length) ->
+        {ok, Salt} | {error, ErrorDescription} when Length::integer(),
+                                                    Salt::binary(),
+                                                    ErrorDescription::string()).
 gen_salt(Length) when Length >= 32, Length =< 64 ->
     % erlang:binary_to_list(crypto:strong_rand_bytes(Length)).
     {ok, crypto:strong_rand_bytes(Length)};
 gen_salt(Length) when Length < 32 ->
-    throw({error, "Minimum length is 32. Provided: " ++ erlang:integer_to_list(Length)});
+    {error, "Minimum length is 32. Provided: " ++ erlang:integer_to_list(Length)};
 gen_salt(Length) ->
-    throw({error, "Maximum length is 64. Provided: " ++ erlang:integer_to_list(Length)}).
+    {error, "Maximum length is 64. Provided: " ++ erlang:integer_to_list(Length)}.
 
+%% @doc generate hash of user key using the salt
+%%
+-spec(gen_hash(Type, UserKey, Salt) ->
+        {Type, Mac} when Type::hash_algorithms() - except ripemd160,
+                         UserKey::iodata(),
+                         Salt::iodata(),
+                         Mac::binary()).
+hash_algorithms() - except ripemd160
 gen_hash(Type, UserKey, Salt) ->
     % save the algorithm used, eg md5, sha, sha256
     {Type, crypto:hmac(Type, Salt, UserKey)}.
 
+%% @doc verify that the userkey and salt combination matches the provided hash
+%%
+-spec(verify_key(UserKey, Salt, Hash) ->
+        true | false when UserKey::iodata(),
+                          Salt::iodata(),
+                          Hash::{Type, binary()},
+                          Type::hash_algorithms() - except ripemd160).
 verify_key(UserKey, Salt, Hash) ->
     {HashType, _HashValue} = Hash,
     gen_hash(HashType, UserKey, Salt) =:= Hash.
 
-test_hash() ->
-    AlgoList = [md5, sha, sha256],
-    {ok, Key} = gen_salt(64),
-    {ok, Salt} = gen_salt(32),
-    HashList = [gen_hash(Algo, Key, Salt) || Algo <- AlgoList],
-    lists:all(fun(X) -> verify_key(Key, Salt, X) =:= true end, HashList).
-
+%% @doc sample implementation for providing custom algorithms to
+%%      encrypt and decrypt in a uniform manner
+%%
+-spec(algo_metadata() ->
+        {AlgoType, PadAlgo} where AlgoType = des_ecb | blowfish_ecb | aes_ecb,
+                                  PadAlgo = zero | rfc5652).
 algo_metadata() ->
     % store details such as 
     % - algorithm to use
@@ -46,24 +65,48 @@ algo_metadata() ->
     Pad = rfc5652,
     {Algo, Pad}.
 
-encrypt_data(UserKey, Data) ->
-    encrypt_data(UserKey, Data, algo_metadata()).
-encrypt_data(UserKey, Data, AlgoMetaData) ->
+% Integration of block and stream functions not done coz AEAD
+
+%% @doc block encrypt data using the user key
+%%
+-spec(block_encrypt_data(UserKey, Data, AlgoMetaData) ->
+    CipherPadData where UserKey = block_key(),
+                        Data = io_data(),
+                        AlgoMetaData = algo_metadata(),
+                        CipherPadData = binary()).
+block_encrypt_data(UserKey, Data) ->
+    block_encrypt_data(UserKey, Data, algo_metadata()).
+block_encrypt_data(UserKey, Data, AlgoMetaData) ->
     {Algo, Pad} = AlgoMetaData,
     % Technically 16 should also be in metadata?
     PadData = pad(Pad, 16, Data),
     crypto:block_encrypt(Algo, UserKey, PadData).
 
-decrypt_data(UserKey, Data) ->
-    decrypt_data(UserKey, Data, algo_metadata()).
-decrypt_data(UserKey, Data, AlgoMetaData) ->
+%% @doc block decrypt data using the user key
+%%
+-spec(block_decrypt_data(UserKey, Data, AlgoMetaData) ->
+        PlainData where UserKey = block_key(),
+                        Data = binary(),
+                        AlgoMetaData = algo_metadata(),
+                        PlainData = iodata()).
+block_decrypt_data(UserKey, Data) ->
+    block_decrypt_data(UserKey, Data, algo_metadata()).
+block_decrypt_data(UserKey, Data, AlgoMetaData) ->
     {Algo, Pad} = AlgoMetaData,
     PadData = crypto:block_decrypt(Algo, UserKey, Data),
     unpad(Pad, PadData).
 
-verify_encryption(Key, Msg, AlgoMetaData) ->
-    EncryptedMsg = encrypt_data(Key, Msg, AlgoMetaData),
-    Msg =:= decrypt_data(Key, EncryptedMsg, AlgoMetaData).
+%% @doc verify that the data is encryted correctly
+%%
+-spec(verify_block_encryption(Key, Msg, AlgoMetaData) ->
+        {true|false, EncryptedMsg} when Key = block_key(),
+                                        Msg = io_data(),
+                                        AlgoMetaData = algo_metadata(),
+                                        EncryptedMsg = binary()).
+verify_block_encryption(Key, Msg, AlgoMetaData) ->
+    EncryptedMsg = block_encrypt_data(Key, Msg, AlgoMetaData),
+    {Msg =:= block_decrypt_data(Key, EncryptedMsg, AlgoMetaData),
+         EncryptedMsg}.
 
 test_encryption() ->
     AlgoList = [aes_ecb],
@@ -71,7 +114,8 @@ test_encryption() ->
     {ok, Key} = gen_salt(32),
     Msg = <<"Test Binary Stream">>,
     MetaDataList = [{Algo, Pad} || Algo <- AlgoList, Pad <- PadType],
-    lists:all(fun(X) -> verify_encryption(Key, Msg, X) =:= true end, MetaDataList).
+    lists:all(fun(X) -> verify_encryption(Key, Msg, X) =:= {true, _} end,
+              MetaDataList).
 
 pad(zero, Width, Binary) ->
     pad_zero(Width, Binary);
