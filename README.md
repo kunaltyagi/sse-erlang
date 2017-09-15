@@ -22,7 +22,7 @@ ssec_base:verify_key(Key, Salt, Hash).
 ### Stage 3
 The key from the user can be used to encrypt or decrypt ```Data``` using
 ```erlang
-EncryptedData =ssec_base:block_encrypt_data(Key, Data).
+EncryptedData = ssec_base:block_encrypt_data(Key, Data).
 % at a later point of time
 Data = ssec_base:block_decrypt_data(Key, EncryptedData).
 ```
