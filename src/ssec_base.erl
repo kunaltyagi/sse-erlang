@@ -1,5 +1,7 @@
 -module(ssec_base).
 
+-author("kunal.tyagi").
+
 -export([gen_salt/1,
          gen_hash/3,
          verify_key/3,
