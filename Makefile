@@ -10,7 +10,7 @@ all:
 	@$(REBAR) update-deps
 	@$(REBAR) get-deps
 	@$(REBAR) compile
-	@$(REBAR) xref skip_deps=true
+#	@$(REBAR) xref skip_deps=true
 	@$(REBAR) eunit skip_deps=true
 compile:
 	@$(REBAR) compile skip_deps=true
