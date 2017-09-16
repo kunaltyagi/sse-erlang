@@ -1,0 +1,11 @@
+{application, sse_erlang,
+  [
+   {description, "SSE-C in Erlang"},
+   {vsn, "0.1"},
+   {id, "sse-erlang"},
+   {registered, []},
+   {applications, [kernel, stdlib]},
+   {mod, {sse_erlang, []}},
+   {env, []}
+  ]
+}.
