@@ -3,8 +3,8 @@
 -author("kunal.tyagi").
 
 -ifdef(TEST).
--include("eunit/include/eunit.hrl").
--endif().
+-include_lib("eunit/include/eunit.hrl").
+-endif.
 
 -export([gen_salt/1,
          gen_hash/3,
