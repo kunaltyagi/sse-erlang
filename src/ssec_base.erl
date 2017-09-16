@@ -9,10 +9,12 @@
 -export([gen_salt/1,
          gen_hash/3,
          verify_key/3,
+         verify_block_encryption/3, verify_stream_encryption/3,
          block_encrypt_data/2, block_encrypt_data/3,
          block_decrypt_data/2, block_decrypt_data/3,
          stream_encrypt_data/2, stream_encrypt_data/3,
-         stream_decrypt_data/2, stream_decrypt_data/3
+         stream_decrypt_data/2, stream_decrypt_data/3,
+         stream_encrypt_data/4, stream_decrypt_data/4
         ]).
 
 %% @doc generate a random salt
@@ -32,7 +34,7 @@ gen_salt(Length) ->
 %% @doc generate hash of user key using the salt
 %%
 -spec(gen_hash(Type, UserKey, Salt) ->
-        {Type, Mac} when Type::hash_algorithms(),
+        {Type, Mac} when Type::crypto:hash_algorithms(),
                          %% except ripemd160,
                          UserKey::iodata(),
                          Salt::iodata(),
@@ -47,7 +49,7 @@ gen_hash(Type, UserKey, Salt) ->
         true | false when UserKey::iodata(),
                           Salt::iodata(),
                           Hash::{Type, binary()},
-                          Type::hash_algorithms()).
+                          Type::crypto:hash_algorithms()).
                           %% except ripemd160
 verify_key(UserKey, Salt, Hash) ->
     {HashType, _HashValue} = Hash,
@@ -72,28 +74,35 @@ algo_metadata() ->
 
 % Integration of block and stream functions not done coz AEAD
 
-%% @doc block encrypt data using the user key
+%% @doc block encrypt data using the user key and default settings
 %%
--spec(block_encrypt_data(UserKey, Data, AlgoMetaData) ->
-        CipherPadData when UserKey::block_key(),
-                            Data::io_data(),
-                            AlgoMetaData::algo_metadata(),
+-spec(block_encrypt_data(UserKey, Data) ->
+        CipherPadData when UserKey::crypto:block_key(),
+                            Data::crypto:io_data(),
                             CipherPadData::binary()).
 block_encrypt_data(UserKey, Data) ->
     block_encrypt_data(UserKey, Data, algo_metadata()).
+
+%% @doc block encrypt data using the user key and custom settings
+%%
+-spec(block_encrypt_data(UserKey, Data, AlgoMetaData) ->
+        CipherPadData when UserKey::crypto:block_key(),
+                            Data::crypto:io_data(),
+                            AlgoMetaData::algo_metadata(),
+                            CipherPadData::binary()).
 block_encrypt_data(UserKey, Data, AlgoMetaData) ->
     {Algo, Pad} = AlgoMetaData,
     % Technically 16 should also be in metadata?
     PadData = pad(Pad, 16, Data),
     crypto:block_encrypt(Algo, UserKey, PadData).
 
-%% @doc stream encrypt data using the user key
+%% @doc stream encrypt data using the user key and settings (no default)
 %%
 -spec(stream_encrypt_data(UserKey, Data, AlgoMetaData) ->
-        {State, CipherData} when UserKey::{key, io_data()} | State,
-                                  Data::io_data(),
+        {State, CipherData} when UserKey::{key, crypto:io_data()} | State,
+                                  Data::crypto:io_data(),
                                   AlgoMetaData::algo_metadata(),
-                                  State::{state, opaque()},
+                                  State::{state, crypto:opaque()},
                                   CipherData::binary()).
 stream_encrypt_data({state, OldState}, Data) ->
     {NewStream, CipherData} = crypto:stream_encrypt(OldState, Data),
@@ -107,11 +116,11 @@ stream_encrypt_data({key, UserKey}, Data, AlgoMetaData) ->
 %% @doc stream encrypt data using the user key and init vector
 %%
 -spec(stream_encrypt_data(UserKey, Data, IVec, AlgoMetaData) ->
-        {State, CipherData} when UserKey::{key, io_data()},
-                                  Data::io_data(),
+        {State, CipherData} when UserKey::{key, crypto:io_data()},
+                                  Data::crypto:io_data(),
                                   IVec::binary(),
                                   AlgoMetaData::algo_metadata(),
-                                  State::{state, opaque()},
+                                  State::{state, crypto:opaque()},
                                   CipherData::binary()).
 %stream_encrypt_data({key, UserKey}, Data, IVec) ->
 %    stream_encrypt_data(UserKey, Data, IVec, algo_metadata()).
@@ -122,7 +131,7 @@ stream_encrypt_data({key, UserKey}, Data, IVec, AlgoMetaData) ->
 %% @doc block decrypt data using the user key
 %%
 -spec(block_decrypt_data(UserKey, Data, AlgoMetaData) ->
-        PlainData when UserKey::block_key(),
+        PlainData when UserKey::crypto:block_key(),
                         Data::binary(),
                         AlgoMetaData::algo_metadata(),
                         PlainData::iodata()).
@@ -136,10 +145,10 @@ block_decrypt_data(UserKey, Data, AlgoMetaData) ->
 %% @doc stream decrypt data using the user key
 %%
 -spec(stream_decrypt_data(UserKey, Data, AlgoMetaData) ->
-        {State, CipherData} when UserKey::{key, io_data()} | State,
-                                  Data::io_data(),
+        {State, CipherData} when UserKey::{key, crypto:io_data()} | State,
+                                  Data::crypto:io_data(),
                                   AlgoMetaData::algo_metadata(),
-                                  State::{state, opaque()},
+                                  State::{state, crypto:opaque()},
                                   CipherData::binary()).
 stream_decrypt_data({state, OldState}, Data) ->
     crypto:stream_decrypt(OldState, Data);
@@ -152,11 +161,11 @@ stream_decrypt_data({key, UserKey}, Data, AlgoMetaData) ->
 %% @doc stream decrypt data using the user key and init vector
 %%
 -spec(stream_decrypt_data(UserKey, Data, IVec, AlgoMetaData) ->
-        {State, CipherData} when UserKey::{key, io_data()} | State,
-                                  Data::io_data(),
+        {State, CipherData} when UserKey::{key, crypto:io_data()} | State,
+                                  Data::crypto:io_data(),
                                   IVec::binary(),
                                   AlgoMetaData::algo_metadata(),
-                                  State::{state, opaque()},
+                                  State::{state, crypto:opaque()},
                                   CipherData::binary()).
 %stream_decrypt_data({key, UserKey}, Data, IVec) ->
 %    stream_decrypt_data(UserKey, Data, IVec, algo_metadata()).
@@ -164,11 +173,11 @@ stream_decrypt_data({key, UserKey}, Data, IVec, AlgoMetaData) ->
     {Algo, _} = AlgoMetaData,
     stream_decrypt_data({state, crypto:stream_init(Algo, UserKey, IVec)}, Data).
 
-%% @doc verify that the data is encryted correctly
+%% @doc verify that block data is encrypted correctly
 %%
 -spec(verify_block_encryption(Key, Msg, AlgoMetaData) ->
-        {Status, EncryptedMsg} when Key::block_key(),
-                                    Msg::io_data(),
+        {Status, EncryptedMsg} when Key::crypto:block_key(),
+                                    Msg::crypto:io_data(),
                                     AlgoMetaData::algo_metadata(),
                                     Status::true|false,
                                     EncryptedMsg::binary()).
@@ -176,13 +185,33 @@ verify_block_encryption(Key, Msg, AlgoMetaData) ->
     EncryptedMsg = block_encrypt_data(Key, Msg, AlgoMetaData),
     {Msg =:= block_decrypt_data(Key, EncryptedMsg, AlgoMetaData),
          EncryptedMsg}.
-% @TODO verify_stream_encryption
 
+-spec(verify_stream_encryption(Key, Msg, AlgoMetaData) ->
+        {Status, EncryptedMsg} when Key::crypto:stream_key(),
+                                    Msg::crypto:io_data(),
+                                    AlgoMetaData::algo_metadata(),
+                                    Status::true|false,
+                                    EncryptedMsg::binary()).
+%% @doc verify that stream data is encrypted correctly
+verify_stream_encryption(_Key, _Msg, _AlgoMetaData) ->
+    {false, "@TODO not implemented yet"}.
+
+%% @doc pad binary data
+%%
+-spec(pad(zero|rfc5652, Width, Binary) ->
+        PaddedBinary when Width::integer(),
+                          Binary::binary(),
+                          PaddedBinary::binary()).
 pad(zero, Width, Binary) ->
     pad_zero(Width, Binary);
 pad(rfc5652, Width, Binary) ->
     pad_rfc5652(Width, Binary).
 
+%% @doc unpad binary data
+%%
+-spec(unpad(zero|rfc5652, Binary) ->
+        UnpaddedBinary when Binary::binary(),
+                            UnpaddedBinary::binary()).
 unpad(zero, Binary) ->
     unpad_zero(Binary);
 unpad(rfc5652, Binary) ->
@@ -193,18 +222,37 @@ unpad(rfc5652, Binary) ->
 % pad_rfc5652/3 does this, but don't use it to pad with zeroes
 % Alternative Unpad implementation not done to prevent misuse
 
-pad_zero(Width, Binary) ->
+%% @doc pad data with zeroes at the end
+%% @private
+-spec(pad_zero(Width, Binary) ->
+        PaddedBinary when Width::integer(),
+                          Binary::binary(),
+                          PaddedBinary::binary()).
+pad_zero(Width, Binary) when Width /= 0 ->
     case (Width - (size(Binary) rem Width)) rem Width of
         0 -> Binary;
         N -> <<Binary/binary, 0:(N*8)>> % 8 bits in one byte
     end.
 
+%% @doc unpad zeroes from end of data
+%%      Handles empty binaries
+%%      @see unpad_zero/2
+%% @private
+-spec(unpad_zero(Binary) ->
+        UnpaddedBinary when Binary::binary(),
+                            UnpaddedBinary::binary()).
 unpad_zero(Binary) ->
   unpad_zero(Binary, size(Binary) - 1).
 
+%% @doc unpad zeroes by counting them
+%% @private
+-spec(unpad_zero(Binary, Idx) ->
+        UnpaddedBinary when Binary::binary(),
+                            Idx::integer(),
+                            UnpaddedBinary::binary()).
 unpad_zero(_Binary, -1) ->
   <<>>;
-unpad_zero(Binary, Idx) ->
+unpad_zero(Binary, Idx) when Idx > -1 ->
   case binary:at(Binary, Idx) of
     0 -> unpad_zero(Binary, Idx - 1);
     _ -> binary:part(Binary, 0, Idx + 1)
@@ -236,6 +284,7 @@ pad_rfc5652(OrigWidth, Length, Binary) ->
     pad_rfc5652(OrigWidth, Length - 1, <<Binary/binary, OrigWidth:8>>).
 
 %% @doc unpad data padded a per RFC5652
+%%      Can't take empty bianries as input coz invalid input
 %% @private
 -spec(unpad_rfc5652(Binary) ->
         UnpaddedBinary when Binary::binary(),
