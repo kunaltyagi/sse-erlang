@@ -12,9 +12,8 @@
          verify_block_encryption/3, verify_stream_encryption/3,
          block_encrypt_data/2, block_encrypt_data/3,
          block_decrypt_data/2, block_decrypt_data/3,
-         stream_encrypt_data/2, stream_encrypt_data/3,
-         stream_decrypt_data/2, stream_decrypt_data/3,
-         stream_encrypt_data/4, stream_decrypt_data/4
+         stream_encrypt_data/3, stream_encrypt_data/4,
+         stream_decrypt_data/3, stream_decrypt_data/4
         ]).
 
 %% @doc generate a random salt
@@ -96,37 +95,48 @@ block_encrypt_data(UserKey, Data, AlgoMetaData) ->
     PadData = pad(Pad, 16, Data),
     crypto:block_encrypt(Algo, UserKey, PadData).
 
+%% @doc stream encrypt data using user key
+%%
+-spec(stream_encrypt_data(State, Data) ->
+        {State, CipherData} when State::crypto:opaque(),
+                                 Data::crypto:io_data(),
+                                 CipherData::binary()).
+stream_encrypt_data(State, Data) ->
+    crypto:stream_encrypt(State, Data).
+
 %% @doc stream encrypt data using the user key and settings (no default)
 %%
 -spec(stream_encrypt_data(UserKey, Data, AlgoMetaData) ->
-        {State, CipherData} when UserKey::{key, crypto:io_data()} | State,
-                                  Data::crypto:io_data(),
-                                  AlgoMetaData::algo_metadata(),
-                                  State::{state, crypto:opaque()},
-                                  CipherData::binary()).
-stream_encrypt_data({state, OldState}, Data) ->
-    {NewStream, CipherData} = crypto:stream_encrypt(OldState, Data),
-    {{state, NewStream}, CipherData};
-stream_encrypt_data({key, UserKey}, Data) ->
-    stream_encrypt_data({key, UserKey}, Data, algo_metadata()).
-stream_encrypt_data({key, UserKey}, Data, AlgoMetaData) ->
+        {State, CipherData} when UserKey::crypto:io_data(),
+                                 Data::crypto:io_data(),
+                                 AlgoMetaData::algo_metadata(),
+                                 State::{state, crypto:opaque()},
+                                 CipherData::binary()).
+stream_encrypt_data(UserKey, Data, AlgoMetaData) ->
     {Algo, _} = AlgoMetaData,
-    stream_encrypt_data({state, crypto:stream_init(Algo, UserKey)}, Data).
+    stream_encrypt_data(crypto:stream_init(Algo, UserKey), Data).
 
 %% @doc stream encrypt data using the user key and init vector
 %%
 -spec(stream_encrypt_data(UserKey, Data, IVec, AlgoMetaData) ->
-        {State, CipherData} when UserKey::{key, crypto:io_data()},
-                                  Data::crypto:io_data(),
-                                  IVec::binary(),
-                                  AlgoMetaData::algo_metadata(),
-                                  State::{state, crypto:opaque()},
-                                  CipherData::binary()).
-%stream_encrypt_data({key, UserKey}, Data, IVec) ->
-%    stream_encrypt_data(UserKey, Data, IVec, algo_metadata()).
-stream_encrypt_data({key, UserKey}, Data, IVec, AlgoMetaData) ->
+        {State, CipherData} when UserKey::crypto:io_data(),
+                                 Data::crypto:io_data(),
+                                 IVec::binary(),
+                                 AlgoMetaData::algo_metadata(),
+                                 State::crypto:opaque(),
+                                 CipherData::binary()).
+stream_encrypt_data(UserKey, Data, IVec, AlgoMetaData) ->
     {Algo, _} = AlgoMetaData,
-    stream_encrypt_data({state, crypto:stream_init(Algo, UserKey, IVec)}, Data).
+    stream_encrypt_data(crypto:stream_init(Algo, UserKey, IVec), Data).
+
+%% @doc block decrypt data using the user key
+%%
+-spec(block_decrypt_data(UserKey, Data) ->
+        PlainData when UserKey::crypto:block_key(),
+                        Data::binary(),
+                        PlainData::iodata()).
+block_decrypt_data(UserKey, Data) ->
+    block_decrypt_data(UserKey, Data, algo_metadata()).
 
 %% @doc block decrypt data using the user key
 %%
@@ -135,8 +145,6 @@ stream_encrypt_data({key, UserKey}, Data, IVec, AlgoMetaData) ->
                         Data::binary(),
                         AlgoMetaData::algo_metadata(),
                         PlainData::iodata()).
-block_decrypt_data(UserKey, Data) ->
-    block_decrypt_data(UserKey, Data, algo_metadata()).
 block_decrypt_data(UserKey, Data, AlgoMetaData) ->
     {Algo, Pad} = AlgoMetaData,
     PadData = crypto:block_decrypt(Algo, UserKey, Data),
