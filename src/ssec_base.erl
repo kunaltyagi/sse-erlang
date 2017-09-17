@@ -175,8 +175,6 @@ stream_decrypt_data({key, UserKey}, Data, AlgoMetaData) ->
                                   AlgoMetaData::algo_metadata(),
                                   State::{state, crypto:opaque()},
                                   CipherData::binary()).
-%stream_decrypt_data({key, UserKey}, Data, IVec) ->
-%    stream_decrypt_data(UserKey, Data, IVec, algo_metadata()).
 stream_decrypt_data({key, UserKey}, Data, IVec, AlgoMetaData) ->
     {Algo, _} = AlgoMetaData,
     stream_decrypt_data({state, crypto:stream_init(Algo, UserKey, IVec)}, Data).
@@ -194,10 +192,10 @@ verify_block_encryption(Key, Msg, AlgoMetaData) ->
     {Msg =:= block_decrypt_data(Key, EncryptedMsg, AlgoMetaData),
          EncryptedMsg}.
 
--spec(verify_stream_encryption(Key, Msg, AlgoMetaData) ->
-        {Status, EncryptedMsg} when Key::crypto:stream_key(),
-                                    Msg::crypto:io_data(),
-                                    AlgoMetaData::algo_metadata(),
+-spec(verify_stream_encryption(_Key, _Msg, _AlgoMetaData) ->
+        {Status, EncryptedMsg} when _Key::crypto:stream_key(),
+                                    _Msg::crypto:io_data(),
+                                    _AlgoMetaData::algo_metadata(),
                                     Status::true|false,
                                     EncryptedMsg::binary()).
 %% @doc verify that stream data is encrypted correctly
