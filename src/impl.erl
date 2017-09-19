@@ -3,19 +3,30 @@
 -author("kunal.tyagi").
 
 -export([verify_ssec_algorithm/1,
-         verify_ssec_key/2,
-         test_verification_ssec_key/0]).
+         verify_ssec_key/2]).
 
+%% @doc verifies that the user demanded the correct algorithm
+%%      only AES256 allowed
+-spec(verify_ssec_algorithm(Algorithm) ->
+        {Status, ValidAlgorithms} when Algorithm::string(),
+                                       Status::boolean(),
+                                       ValidAlgorithms::[string()]).
 verify_ssec_algorithm(Algorithm) ->
     ValidAlgorithms = ["AES256"],
     {lists:member(Algorithm, ValidAlgorithms), ValidAlgorithms}.
 
+%% @doc verifies that the user provided key matches the hash
+%%      Key and hash are Base64 encoded
+-spec(verify_ssec_key(ASCIIKey, Checksum) ->
+        {Status, ErrorDescription} when ASCIIKey::string(),
+                                        Checksum::{Type, ASCIIHash},
+                                        Type::md5,
+                                        ASCIIHash::string(),
+                                        Status::boolean(),
+                                        ErrorDescription::string()).
 verify_ssec_key(ASCIIKey, Checksum) ->
-    % is_list(ASCIIKey)?
     Key = base64:decode(ASCIIKey),
     {HashType, ASCIIHash} = Checksum,
-    % is_atom(HashValue)?
-    % is_list(ASCIIHash)?
     HashValue = base64:decode(ASCIIHash),
     if
         size(Key) /= 256/4 ->
@@ -31,15 +42,12 @@ verify_ssec_key(ASCIIKey, Checksum) ->
             {Value, "Verification status"}
     end.
 
-test_verification_ssec_key() ->
-    Key = "556B58703273357638792F413F4428472B4B6250655368566D59713374367739",
-    Checksum = "64C40DC99A6FE92CF3B7CBD5C22D8A13",
-    verify_ssec_key(base64:encode(Key), {md5, base64:encode(Checksum)}).
-
+%% @doc GET operation, with user supplied request headers
+%%      ObjectDetails is OS suplied
 get_operation(ObjectDetails, RequestHeaders) ->
     {Algorithm, Key, Checksum} = RequestHeaders,
     Md5Checksum = {md5, Checksum},
-    get_operation({algo, verify_ssec_algorithm(Algorithm)});
+    get_operation({algo, verify_ssec_algorithm(Algorithm)}).
 get_operation({algo, {AlgoStatus, _AlgoList}}) ->
     if
         AlgoStatus =:= false ->
@@ -56,5 +64,18 @@ get_operation({algo, {AlgoStatus, _AlgoList}}) ->
             end
     end.
 
-getObject(ObjectDetails) ->
+%% @doc dummy function to get the requested object and its metadata
+%%
+-spec(getObjectMetaData(ObjectDetails)->
+        {Salt, Hash, MetaData} when ObjectDetails::binary(),
+                                    Salt::binary(),
+                                    Hash::binary(),
+                                    MetaData::binary()).
+getObjectMetaData(ObjectDetails) ->
     {false, "TODO. Not implemented"}.
+
+-spec(getObjectData(ObjectDetails)->
+        Data when ObjectDetails::binary(),
+                  Data::binary()).
+getObjectData(ObjectDetails) ->
+    {false, "TODO, not implemented"}.
