@@ -4,10 +4,10 @@
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+-spec test() -> term(). %% SRSLY can we do better?
 -endif.
 
--export([gen_salt/1,
-         gen_hash/3,
+-export([gen_salt/1, gen_hash/3,
          verify_key/3,
          verify_block_encryption/3, verify_stream_encryption/3,
          block_encrypt_data/2, block_encrypt_data/3,
@@ -15,6 +15,9 @@
          stream_encrypt_data/3, stream_encrypt_data/4,
          stream_decrypt_data/3, stream_decrypt_data/4
         ]).
+
+-type algo_metadata() :: {rc4|des_ecb|blowfish_ecb|aes_ecb,
+                          zero|rfc5652}.
 
 %% @doc generate a random salt
 %%
@@ -58,10 +61,9 @@ verify_key(UserKey, Salt, Hash) ->
 %%      encrypt and decrypt in a uniform manner. Use proper algorithm type for
 %%      block and stream functions
 %%
--spec(algo_metadata() ->
-        {AlgoType, PadAlgo} when AlgoType::rc4|des_ecb|blowfish_ecb|aes_ecb,
-                                  PadAlgo::zero|rfc5652).
-algo_metadata() ->
+-spec(algo_meta_data() ->
+        algo_metadata).
+algo_meta_data() ->
     % store details such as
     % - algorithm to use
     % - use IVec or not
@@ -80,7 +82,7 @@ algo_metadata() ->
                             Data::crypto:io_data(),
                             CipherPadData::binary()).
 block_encrypt_data(UserKey, Data) ->
-    block_encrypt_data(UserKey, Data, algo_metadata()).
+    block_encrypt_data(UserKey, Data, algo_meta_data()).
 
 %% @doc block encrypt data using the user key and custom settings
 %%
@@ -136,7 +138,7 @@ stream_encrypt_data(UserKey, Data, IVec, AlgoMetaData) ->
                         Data::binary(),
                         PlainData::iodata()).
 block_decrypt_data(UserKey, Data) ->
-    block_decrypt_data(UserKey, Data, algo_metadata()).
+    block_decrypt_data(UserKey, Data, algo_meta_data()).
 
 %% @doc block decrypt data using the user key
 %%
@@ -161,7 +163,7 @@ block_decrypt_data(UserKey, Data, AlgoMetaData) ->
 stream_decrypt_data({state, OldState}, Data) ->
     crypto:stream_decrypt(OldState, Data);
 stream_decrypt_data({key, UserKey}, Data) ->
-    stream_decrypt_data(UserKey, Data, algo_metadata()).
+    stream_decrypt_data(UserKey, Data, algo_meta_data()).
 stream_decrypt_data({key, UserKey}, Data, AlgoMetaData) ->
     {Algo, _} = AlgoMetaData,
     stream_decrypt_data({state, crypto:stream_init(Algo, UserKey)}, Data).
