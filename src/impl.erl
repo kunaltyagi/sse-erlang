@@ -2,8 +2,17 @@
 
 -author("kunal.tyagi").
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-spec test() -> term(). %% SRSLY can we do better?
+-endif.
+
 -export([verify_ssec_algorithm/1,
          verify_ssec_key/2]).
+
+%%-------------------------------------------------------------------------
+%% API
+%%-------------------------------------------------------------------------
 
 %% @doc verifies that the user demanded the correct algorithm
 %%      only AES256 allowed
@@ -64,8 +73,12 @@ get_operation({algo, {AlgoStatus, _AlgoList}}) ->
             end
     end.
 
+%%-------------------------------------------------------------------------
+%% Private
+%%-------------------------------------------------------------------------
+
 %% @doc dummy function to get the requested object and its metadata
-%%
+%% @private
 -spec(getObjectMetaData(ObjectDetails)->
         {Salt, Hash, MetaData} when ObjectDetails::binary(),
                                     Salt::binary(),
@@ -74,6 +87,8 @@ get_operation({algo, {AlgoStatus, _AlgoList}}) ->
 getObjectMetaData(ObjectDetails) ->
     {false, "TODO. Not implemented"}.
 
+%% @doc dummy function to get the requested data
+%% @private
 -spec(getObjectData(ObjectDetails)->
         Data when ObjectDetails::binary(),
                   Data::binary()).

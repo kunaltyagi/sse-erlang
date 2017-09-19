@@ -16,6 +16,10 @@
          stream_decrypt_data/3, stream_decrypt_data/4
         ]).
 
+%%-------------------------------------------------------------------------
+%% API
+%%-------------------------------------------------------------------------
+
 -type algo_metadata() :: {rc4|des_ecb|blowfish_ecb|aes_ecb,
                           zero|rfc5652}.
 
@@ -205,8 +209,12 @@ verify_block_encryption(Key, Msg, AlgoMetaData) ->
 verify_stream_encryption(_Key, _Msg, _AlgoMetaData) ->
     {false, "@TODO not implemented yet"}.
 
+%%-------------------------------------------------------------------------
+%% Private
+%%-------------------------------------------------------------------------
+
 %% @doc pad binary data
-%%
+%% @private
 -spec(pad(zero|rfc5652, Width, Binary) ->
         PaddedBinary when Width::integer(),
                           Binary::binary(),
@@ -217,7 +225,7 @@ pad(rfc5652, Width, Binary) ->
     pad_rfc5652(Width, Binary).
 
 %% @doc unpad binary data
-%%
+%% @private
 -spec(unpad(zero|rfc5652, Binary) ->
         UnpaddedBinary when Binary::binary(),
                             UnpaddedBinary::binary()).
