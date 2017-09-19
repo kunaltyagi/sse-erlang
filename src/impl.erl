@@ -7,8 +7,7 @@
 -spec test() -> term(). %% SRSLY can we do better?
 -endif.
 
--export([verify_ssec_algorithm/1,
-         verify_ssec_key/2]).
+-export([get_operation/2]).
 
 %%-------------------------------------------------------------------------
 %% API
@@ -16,23 +15,32 @@
 
 %% @doc GET operation, with user supplied request headers
 %%      ObjectDetails is OS suplied
+-spec(get_operation(ObjectDetails, RequestHeaders) ->
+        {error, ErrorDescription} | Data when ObjectDetails::binary(),
+                                              RequestHeaders::any(),
+                                              ErrorDescription::string(),
+                                              Data::binary()).
 get_operation(ObjectDetails, RequestHeaders) ->
     {Algorithm, Key, Checksum} = RequestHeaders,
     Md5Checksum = {md5, Checksum},
-    get_operation({algo, verify_ssec_algorithm(Algorithm)}).
-get_operation({algo, {AlgoStatus, _AlgoList}}) ->
+    {AlgoStatus, AlgoList} = ssec_base:verify_ssec_algorithm(Algorithm),
     if
         AlgoStatus =:= false ->
-            {false, "Expected " ++ AlgoList ++ "Provided: " ++ Algorithm};
+            {error, "Expected " ++ AlgoList ++ "Provided: " ++ Algorithm};
         true ->
-            {KeyStatus, KeyMessage} = verify_ssec_key(Key, Md5Checksum),
+            {KeyStatus, Error} = ssec_base:verify_ssec_key(Key, Md5Checksum),
             if
-                KeyStatus =:= false ->
-                    {KeyStatus, Message};
+                KeyStatus ->
+                    {Salt, Hash, _Meta} = get_object_metadata(ObjectDetails),
+                    Verification = ssec_base:verify_key(Key, Salt, Hash),
+                    if
+                        Verification ->
+                            ssec_base:block_decrypt_data(Key, get_object_data(ObjectDetails));
+                        true ->
+                            {error, "Wrong Key provided"}
+                    end;
                 true ->
-                    {Salt, Hash, Data} = getObject(ObjectDetails),
-                    true
-%                    ssec_base:verify_key
+                    {error, Error}
             end
     end.
 
@@ -42,18 +50,18 @@ get_operation({algo, {AlgoStatus, _AlgoList}}) ->
 
 %% @doc dummy function to get the requested object and its metadata
 %% @private
--spec(getObjectMetaData(ObjectDetails)->
+-spec(get_object_metadata(ObjectDetails)->
         {Salt, Hash, MetaData} when ObjectDetails::binary(),
                                     Salt::binary(),
                                     Hash::binary(),
                                     MetaData::binary()).
-getObjectMetaData(ObjectDetails) ->
+get_object_metadata(_ObjectDetails) ->
     {false, "TODO. Not implemented"}.
 
 %% @doc dummy function to get the requested data
 %% @private
--spec(getObjectData(ObjectDetails)->
+-spec(get_object_data(ObjectDetails)->
         Data when ObjectDetails::binary(),
                   Data::binary()).
-getObjectData(ObjectDetails) ->
+get_object_data(_ObjectDetails) ->
     {false, "TODO, not implemented"}.

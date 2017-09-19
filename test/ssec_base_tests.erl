@@ -18,7 +18,7 @@ check_wrapper(Fn, MinValue, MaxValue) when MaxValue >= MinValue ->
 check_wrapper(_Fn, _MinValue, _MaxValue) ->
     true.
 
--spec(run_test_() -> true|false).
+-spec(run_test_() -> boolean()).
 run_test_() ->
     {setup,
      fun()  -> ok end,
@@ -69,6 +69,7 @@ verify_key(Len) ->
 
 
 %% Test 4
+-spec(verify_block_encryption_test_() -> boolean()).
 verify_block_encryption_test_() ->
     [
      fun() ->
