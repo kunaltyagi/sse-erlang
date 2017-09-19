@@ -53,10 +53,11 @@ check_hash(Len) ->
     {ok, Salt1} = ssec_base:gen_salt(Len),
     {ok, Salt2} = ssec_base:gen_salt(Len),
     % Check Hash algo actually generates hash
-    ?assert(lists:all(fun(Algo) -> {Algo, crypto:hmac(Algo, Key, Salt1)} =:= ssec_base:gen_hash(Algo, Salt1, Key) end, AlgoList)),
+    lists:foreach(fun(Algo) -> ?assertEqual({Algo, crypto:hmac(Algo, Key, Salt1)}, ssec_base:gen_hash(Algo, Salt1, Key)) end, AlgoList),
     % Check Hash is diff for diff salts
     HashList = lists:map(fun(Algo) -> {ssec_base:gen_hash(Algo, Key, Salt1), ssec_base:gen_hash(Algo, Key, Salt2)} end, AlgoList),
-    ?assert(lists:all(fun({Hash1, Hash2}) -> Hash1 /= Hash2 end, HashList)).
+    lists:foreach(fun({Hash1, Hash2}) -> ?assertNotEqual(Hash1, Hash2) end,
+                  HashList).
 
 %% Test 3
 verify_key(Len) ->
@@ -64,22 +65,21 @@ verify_key(Len) ->
     {ok, Key} = ssec_base:gen_salt(64),
     {ok, Salt} = ssec_base:gen_salt(Len),
     HashList = lists:map(fun(Algo) -> ssec_base:gen_hash(Algo, Key, Salt) end, AlgoList),
-    ?assert(lists:all(fun(Hash) -> ssec_base:verify_key(Key, Salt, Hash) =:= true end, HashList)).
+    lists:foreach(fun(Hash) -> ?assert(ssec_base:verify_key(Key, Salt, Hash)) end, HashList).
 
 
 %% Test 3
-%verify_block_encryption_test_() ->
-%    [
-%     fun() ->
-%         AlgoList = [aes_ecb],
-%         PadType = [zero, rfc5652],
-%         {ok, Key} = ssec_base:gen_salt(32),
-%         Msg = <<"Test Binary Stream">>,
-%         MetaDataList = [{Algo, Pad} || Algo <- AlgoList, Pad <- PadType],
-%         lists:all(fun(X) -> {true, _} =:= ssec_base:verify_block_encryption(Key, Msg, X) end,
-%             MetaDataList)
-%     end
-%    ].
+verify_block_encryption_test_() ->
+    [
+     fun() ->
+         AlgoList = [aes_ecb],
+         PadType = [zero, rfc5652],
+         {ok, Key} = ssec_base:gen_salt(32),
+         Msg = <<"Test Binary Stream">>,
+         _MetaDataList = [{Algo, Pad} || Algo <- AlgoList, Pad <- PadType],
+         lists:foreach(fun(X) -> ?assertMatch({true, _}, ssec_base:verify_block_encryption(Key, Msg, X)) end, _MetaDataList)
+     end
+    ].
 
 test_verify_ssec_algorithm() ->
     ?assertMatch({true,_},  ssec_base:verify_ssec_algorithm("AES256")),
