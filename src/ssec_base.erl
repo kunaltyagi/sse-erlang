@@ -48,11 +48,12 @@ gen_hash(Type, UserKey, Salt) ->
 %% @doc verify that the userkey and salt combination matches the provided hash
 %%
 -spec(verify_key(UserKey, Salt, Hash) ->
-        true | false when UserKey::iodata(),
-                          Salt::iodata(),
-                          Hash::{Type, binary()},
-                          Type::crypto:hash_algorithms()).
-                          %% except ripemd160
+        Status when UserKey::iodata(),
+                    Salt::iodata(),
+                    Hash::{Type, binary()},
+                    %% except ripemd160
+                    Type::crypto:hash_algorithms(),
+                    Status::boolean()).
 verify_key(UserKey, Salt, Hash) ->
     {HashType, _HashValue} = Hash,
     gen_hash(HashType, UserKey, Salt) =:= Hash.
@@ -187,7 +188,7 @@ stream_decrypt_data({key, UserKey}, Data, IVec, AlgoMetaData) ->
         {Status, EncryptedMsg} when Key::crypto:block_key(),
                                     Msg::crypto:io_data(),
                                     AlgoMetaData::algo_metadata(),
-                                    Status::true|false,
+                                    Status::boolean(),
                                     EncryptedMsg::binary()).
 verify_block_encryption(Key, Msg, AlgoMetaData) ->
     EncryptedMsg = block_encrypt_data(Key, Msg, AlgoMetaData),
@@ -198,7 +199,7 @@ verify_block_encryption(Key, Msg, AlgoMetaData) ->
         {Status, EncryptedMsg} when _Key::crypto:stream_key(),
                                     _Msg::crypto:io_data(),
                                     _AlgoMetaData::algo_metadata(),
-                                    Status::true|false,
+                                    Status::boolean(),
                                     EncryptedMsg::binary()).
 %% @doc verify that stream data is encrypted correctly
 verify_stream_encryption(_Key, _Msg, _AlgoMetaData) ->
