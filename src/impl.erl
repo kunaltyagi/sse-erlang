@@ -2,9 +2,6 @@
 
 -author("kunal.tyagi").
 
--import(ssec_base, [gen_salt/1, gen_hash/3, verify_key/3, encrypt_data/2,
-                    encrypt_data/3, decrypt_data/2, decrypt_data/3]).
-
 -export([verify_ssec_algorithm/1,
          verify_ssec_key/2,
          test_verification_ssec_key/0]).
@@ -54,7 +51,10 @@ get_operation({algo, {AlgoStatus, _AlgoList}}) ->
                     {KeyStatus, Message};
                 true ->
                     {Salt, Hash, Data} = getObject(ObjectDetails),
-                    ssec_base:verify_key
+                    true
+%                    ssec_base:verify_key
+            end
+    end.
 
 getObject(ObjectDetails) ->
     {false, "TODO. Not implemented"}.
