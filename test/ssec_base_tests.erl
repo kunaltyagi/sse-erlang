@@ -29,20 +29,37 @@ run_test_() ->
         fun() -> check_wrapper(fun check_salt/1, 1, 100) end}},
       {"test gen_hash/1 for salt size 32...64, key 64",
        {timeout, timer:seconds(1),
-        fun() -> check_wrapper(fun check_hash/1, 32, 64) end}}
-      {"test gen_salt/1 for input 1...100",
-       {timeout, timer:seconds(1), fun test_verification_ssec_key/0}}
+        fun() -> check_wrapper(fun check_hash/1, 32, 64) end}},
+      {"test verify_key/1 for salt size 32...64, key 64",
+       {timeout, timer:seconds(1),
+        fun() -> check_wrapper(fun verify_key/1, 32, 64) end}},
+      {"test verify_ssec_algorithm/1",
+       {timeout, timer:seconds(1), fun test_verify_ssec_algorithm/0}},
+      {"test verify_ssec_key/1",
+       {timeout, timer:seconds(1), fun test_verify_ssec_key/0}}
      ]}.
 
 %% Test 1
 check_salt(Len) when Len >= 32, Len =< 64 ->
-%    ?assertMatch({ok, _}, ssec_base:gen_salt(Len)),
+    ?assertMatch({ok, _}, ssec_base:gen_salt(Len)),
     ?assertNotEqual(ssec_base:gen_salt(Len), ssec_base:gen_salt(Len));
 check_salt(Len) ->
     ?assertMatch({error, _}, ssec_base:gen_salt(Len)).
 
 %% Test 2
 check_hash(Len) ->
+    AlgoList = [md5, sha, sha256],
+    {ok, Key} = ssec_base:gen_salt(64),
+    {ok, Salt1} = ssec_base:gen_salt(Len),
+    {ok, Salt2} = ssec_base:gen_salt(Len),
+    % Check Hash algo actually generates hash
+    ?assert(lists:all(fun(Algo) -> {Algo, crypto:hmac(Algo, Key, Salt1)} =:= ssec_base:gen_hash(Algo, Salt1, Key) end, AlgoList)),
+    % Check Hash is diff for diff salts
+    HashList = lists:map(fun(Algo) -> {ssec_base:gen_hash(Algo, Key, Salt1), ssec_base:gen_hash(Algo, Key, Salt2)} end, AlgoList),
+    ?assert(lists:all(fun({Hash1, Hash2}) -> Hash1 /= Hash2 end, HashList)).
+
+%% Test 3
+verify_key(Len) ->
     AlgoList = [md5, sha, sha256],
     {ok, Key} = ssec_base:gen_salt(64),
     {ok, Salt} = ssec_base:gen_salt(Len),
@@ -64,17 +81,21 @@ check_hash(Len) ->
 %     end
 %    ].
 
-test_verification_ssec_key() ->
+test_verify_ssec_algorithm() ->
+    ?assertMatch({true,_},  ssec_base:verify_ssec_algorithm("AES256")),
+    ?assertMatch({false, _}, ssec_base:verify_ssec_algorithm("AES")).
+
+test_verify_ssec_key() ->
     Key = "556B58703273357638792F413F4428472B4B6250655368566D59713374367739",
     Checksum1 = "64C40DC99A6FE92CF3B7CBD5C22D8A13",
-    ?assertMatch({true, _}, verify_ssec_key(base64:encode(Key),
-                                {md5, base64:encode(Checksum1)})).
-    Checksum2 = lists::droplast(Checksum1) ++ "5".
-    ?assertMatch({false, _}, verify_ssec_key(base64:encode(Key),
-                                {md5, base64:encode(Checksum2)})).
-    ?assertMatch({false, _}, verify_ssec_key(base64:encode(lists:droplast(Key)),
-                                {md5, base64:encode(Checksum2)})).
-    ?assertMatch({false, _}, verify_ssec_key(base64:encode(Key),
+    ?assertMatch({true, _}, ssec_base:verify_ssec_key(base64:encode(Key),
+                                {md5, base64:encode(Checksum1)})),
+    Checksum2 = lists:droplast(Checksum1) ++ "5",
+    ?assertMatch({false, _}, ssec_base:verify_ssec_key(base64:encode(Key),
+                                {md5, base64:encode(Checksum2)})),
+    ?assertMatch({false, _}, ssec_base:verify_ssec_key(base64:encode(lists:droplast(Key)),
+                                {md5, base64:encode(Checksum2)})),
+    ?assertMatch({false, _}, ssec_base:verify_ssec_key(base64:encode(Key),
                                 {md5, base64:encode(lists:droplast(Checksum2))})).
 
 -endif.

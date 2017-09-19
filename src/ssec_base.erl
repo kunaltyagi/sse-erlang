@@ -13,7 +13,8 @@
          block_encrypt_data/2, block_encrypt_data/3,
          block_decrypt_data/2, block_decrypt_data/3,
          stream_encrypt_data/3, stream_encrypt_data/4,
-         stream_decrypt_data/3, stream_decrypt_data/4
+         stream_decrypt_data/3, stream_decrypt_data/4,
+         verify_ssec_algorithm/1, verify_ssec_key/2
         ]).
 
 %%-------------------------------------------------------------------------
