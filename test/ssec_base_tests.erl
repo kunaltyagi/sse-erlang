@@ -68,7 +68,7 @@ verify_key(Len) ->
     lists:foreach(fun(Hash) -> ?assert(ssec_base:verify_key(Key, Salt, Hash)) end, HashList).
 
 
-%% Test 3
+%% Test 4
 verify_block_encryption_test_() ->
     [
      fun() ->
@@ -81,6 +81,7 @@ verify_block_encryption_test_() ->
      end
     ].
 
+%% Test 5
 test_verify_ssec_algorithm() ->
     ?assertMatch({true,_},  ssec_base:verify_ssec_algorithm("AES256")),
     ?assertMatch({false, _}, ssec_base:verify_ssec_algorithm("AES")).
@@ -97,5 +98,8 @@ test_verify_ssec_key() ->
                                 {md5, base64:encode(Checksum2)})),
     ?assertMatch({false, _}, ssec_base:verify_ssec_key(base64:encode(Key),
                                 {md5, base64:encode(lists:droplast(Checksum2))})).
+
+%% Test 6
+%% for padding. TODO
 
 -endif.
