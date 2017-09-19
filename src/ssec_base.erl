@@ -209,6 +209,43 @@ verify_block_encryption(Key, Msg, AlgoMetaData) ->
 verify_stream_encryption(_Key, _Msg, _AlgoMetaData) ->
     {false, "@TODO not implemented yet"}.
 
+%% @doc verifies that the user demanded the correct algorithm
+%%      only AES256 allowed
+-spec(verify_ssec_algorithm(Algorithm) ->
+        {Status, ValidAlgorithms} when Algorithm::string(),
+                                       Status::boolean(),
+                                       ValidAlgorithms::[string()]).
+verify_ssec_algorithm(Algorithm) ->
+    ValidAlgorithms = ["AES256"],
+    {lists:member(Algorithm, ValidAlgorithms), ValidAlgorithms}.
+
+%% @doc verifies that the user provided key matches the hash
+%%      Key and hash are Base64 encoded
+-spec(verify_ssec_key(ASCIIKey, Checksum) ->
+        {Status, ErrorDescription} when ASCIIKey::string(),
+                                        Checksum::{Type, ASCIIHash},
+                                        Type::md5,
+                                        ASCIIHash::string(),
+                                        Status::boolean(),
+                                        ErrorDescription::string()).
+verify_ssec_key(ASCIIKey, Checksum) ->
+    Key = base64:decode(ASCIIKey),
+    {HashType, ASCIIHash} = Checksum,
+    HashValue = base64:decode(ASCIIHash),
+    if
+        size(Key) /= 256/4 ->
+           {false, "Key is not 256 bit long. Provided: " ++ erlang:integer_to_list(size(Key))};
+        HashType /= md5 ->
+           {false, "MD5 checksum required. Provided: " ++ erlang:atom_to_list(HashType)};
+        size(HashValue) /= 128/4 ->
+           {false, "MD5 checksum is not 128 bit long. Provided: " ++ erlang:integer_to_list(size(Key))};
+        true ->
+            Lhs = erlang:binary_to_list(crypto:hash(HashType, Key)),
+            Rhs = erlang:binary_to_integer(HashValue, 16),
+            Value = lists:foldl(fun(X, Old) -> X + Old*256 end, 0, Lhs) =:= Rhs,
+            {Value, "Verification status"}
+    end.
+
 %%-------------------------------------------------------------------------
 %% Private
 %%-------------------------------------------------------------------------
