@@ -1,6 +1,8 @@
 # sse-erlang
 Server Side Encryption (SSE) implementation in Erlang
 
+Not maintained any longer. Code merged with Leofs
+
 ## Using ssec_base
 ### Stage 1
 Assuming ```Key``` is provided by the user
